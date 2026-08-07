@@ -10,10 +10,10 @@ class IngredientResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'       => $this->id,
+            'id'       => $this->_id ?? $this->id,
             'name'     => $this->name,
-            'quantity' => $this->whenPivotLoaded('recipe_ingredient', fn () => $this->pivot->quantity),
-            'unit'     => $this->whenPivotLoaded('recipe_ingredient', fn () => $this->pivot->unit),
+            'quantity' => $this->quantity,
+            'unit'     => $this->unit,
         ];
     }
 }

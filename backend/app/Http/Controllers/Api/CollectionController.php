@@ -67,7 +67,7 @@ class CollectionController extends Controller
 
         $data = $request->validate(['recipe_id' => 'required|integer|exists:recipes,id']);
 
-        $collection->recipes()->syncWithoutDetaching([$data['recipe_id'] => ['added_at' => now()]]);
+        $collection->recipes()->syncWithoutDetaching([$data['recipe_id']]);
 
         return response()->json(['message' => 'Recipe added to collection'], 201);
     }
@@ -84,7 +84,7 @@ class CollectionController extends Controller
     {
         $this->authorizeCollection($request, $collection);
 
-        $recipes = $collection->recipes()->with('ingredients')->paginate(20);
+        $recipes = $collection->recipes()->paginate(20);
 
         return RecipeResource::collection($recipes)->response();
     }

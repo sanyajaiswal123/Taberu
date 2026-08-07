@@ -25,7 +25,7 @@ class RecipeResource extends JsonResource
             'reviewCount'  => $this->review_count,
             'viewCount'    => $this->view_count,
             'instructions' => $this->instructions,
-            'ingredients'  => IngredientResource::collection($this->whenLoaded('ingredients')),
+            'ingredients'  => IngredientResource::collection($this->ingredients ?? []),
         ];
     }
 }

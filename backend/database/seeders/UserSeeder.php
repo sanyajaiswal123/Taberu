@@ -46,7 +46,7 @@ class UserSeeder extends Seeder
             ['emoji' => '🍽️', 'sort_order' => 1]
         );
         $weeknightDinners->recipes()->syncWithoutDetaching(
-            collect([1, 2, 8, 12, 14])->mapWithKeys(fn($id) => [$id => ['added_at' => now()->subDays(rand(1, 30))]])->toArray()
+            collect([1, 2, 8, 12, 14])->toArray()
         );
 
         $brunchFaves = Collection::updateOrCreate(
@@ -54,7 +54,7 @@ class UserSeeder extends Seeder
             ['emoji' => '☕', 'sort_order' => 2]
         );
         $brunchFaves->recipes()->syncWithoutDetaching(
-            collect([16, 24, 25, 26, 27])->mapWithKeys(fn($id) => [$id => ['added_at' => now()->subDays(rand(1, 20))]])->toArray()
+            collect([16, 24, 25, 26, 27])->toArray()
         );
 
         $asianSpecials = Collection::updateOrCreate(
@@ -62,7 +62,7 @@ class UserSeeder extends Seeder
             ['emoji' => '🥢', 'sort_order' => 3]
         );
         $asianSpecials->recipes()->syncWithoutDetaching(
-            collect([7, 19, 20, 22, 23])->mapWithKeys(fn($id) => [$id => ['added_at' => now()->subDays(rand(1, 15))]])->toArray()
+            collect([7, 19, 20, 22, 23])->toArray()
         );
 
         // --- Cook Logs (14 cooked entries) ---
@@ -203,7 +203,7 @@ class UserSeeder extends Seeder
             ['emoji' => '⭐', 'sort_order' => 1]
         );
         $staffPicks->recipes()->syncWithoutDetaching(
-            collect([1, 7, 9, 18, 27])->mapWithKeys(fn($id) => [$id => ['added_at' => now()->subDays(rand(1, 10))]])->toArray()
+            collect([1, 7, 9, 18, 27])->toArray()
         );
 
         $trending = Collection::updateOrCreate(
@@ -211,7 +211,7 @@ class UserSeeder extends Seeder
             ['emoji' => '🔥', 'sort_order' => 2]
         );
         $trending->recipes()->syncWithoutDetaching(
-            collect([2, 11, 19, 20, 23, 24])->mapWithKeys(fn($id) => [$id => ['added_at' => now()->subDays(rand(1, 5))]])->toArray()
+            collect([2, 11, 19, 20, 23, 24])->toArray()
         );
 
         $quickEasy = Collection::updateOrCreate(
@@ -219,7 +219,7 @@ class UserSeeder extends Seeder
             ['emoji' => '⏱️', 'sort_order' => 3]
         );
         $quickEasy->recipes()->syncWithoutDetaching(
-            collect([4, 10, 17, 19, 21, 25])->mapWithKeys(fn($id) => [$id => ['added_at' => now()->subDays(rand(1, 7))]])->toArray()
+            collect([4, 10, 17, 19, 21, 25])->toArray()
         );
 
         // --- Admin Cook Logs ---

@@ -13,8 +13,8 @@ class FavoriteController extends Controller
 {
     public function index(): AnonymousResourceCollection
     {
-        $recipes = Recipe::whereHas('favorites', fn ($q) => $q->where('user_id', auth()->id()))
-            ->get();
+        $favoriteRecipeIds = Favorite::where('user_id', auth()->id())->pluck('recipe_id');
+        $recipes = Recipe::whereIn('_id', $favoriteRecipeIds)->get();
 
         return RecipeResource::collection($recipes);
     }

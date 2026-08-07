@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use MongoDB\Laravel\Eloquent\Model;
+use MongoDB\Laravel\Eloquent\EmbedsMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Recipe extends Model
@@ -32,10 +32,9 @@ class Recipe extends Model
         'rating' => 'float',
     ];
 
-    public function ingredients(): BelongsToMany
+    public function ingredients()
     {
-        return $this->belongsToMany(Ingredient::class, 'recipe_ingredient')
-            ->withPivot('quantity', 'unit');
+        return $this->embedsMany(Ingredient::class);
     }
 
     public function favorites(): HasMany

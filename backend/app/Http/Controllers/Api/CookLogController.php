@@ -51,43 +51,32 @@ class CookLogController extends Controller
     {
         $userId = $request->user()->id;
 
-        $totalCooked   = CookLog::where('user_id', $userId)->count();
-        $uniqueRecipes = CookLog::where('user_id', $userId)->distinct('recipe_id')->count('recipe_id');
+        $logs = CookLog::where('user_id', $userId)->with('recipe')->get();
 
-        $mostCooked = CookLog::where('user_id', $userId)
-            ->select('recipe_id', DB::raw('count(*) as count'))
-            ->groupBy('recipe_id')
-            ->orderByDesc('count')
-            ->with('recipe:id,title,emoji,gradient,image')
-            ->first();
+        $totalCooked   = $logs->count();
+        $uniqueRecipes = $logs->unique('recipe_id')->count();
 
-        $cuisineBreakdown = CookLog::where('cook_log.user_id', $userId)
-            ->join('recipes', 'cook_log.recipe_id', '=', 'recipes.id')
-            ->select('recipes.cuisine', DB::raw('count(*) as count'))
-            ->groupBy('recipes.cuisine')
-            ->orderByDesc('count')
-            ->pluck('count', 'cuisine');
+        $recipeCounts = $logs->countBy('recipe_id');
+        
+        $mostCookedId = $recipeCounts->sortDesc()->keys()->first();
+        $mostCookedRecipe = $mostCookedId ? $logs->firstWhere('recipe_id', $mostCookedId)->recipe : null;
+        $mostCooked = $mostCookedRecipe ? (object)[
+            'recipe' => $mostCookedRecipe,
+            'count' => $recipeCounts[$mostCookedId]
+        ] : null;
 
-        $categoryBreakdown = CookLog::where('cook_log.user_id', $userId)
-            ->join('recipes', 'cook_log.recipe_id', '=', 'recipes.id')
-            ->select('recipes.category', DB::raw('count(*) as count'))
-            ->groupBy('recipes.category')
-            ->orderByDesc('count')
-            ->pluck('count', 'category');
+        $cuisineBreakdown = $logs->map->recipe->filter()->countBy('cuisine')->sortDesc();
+        $categoryBreakdown = $logs->map->recipe->filter()->countBy('category')->sortDesc();
 
         $thisMonth = CookLog::where('user_id', $userId)
-            ->whereMonth('cooked_at', now()->month)
-            ->whereYear('cooked_at', now()->year)
+            ->where('cooked_at', '>=', now()->startOfMonth())
+            ->where('cooked_at', '<=', now()->endOfMonth())
             ->count();
 
-        $top5 = CookLog::where('user_id', $userId)
-            ->select('recipe_id', DB::raw('count(*) as count'))
-            ->groupBy('recipe_id')
-            ->orderByDesc('count')
-            ->limit(5)
-            ->with('recipe:id,title,emoji,gradient,image,cuisine,category')
-            ->get()
-            ->map(fn ($log) => array_merge($log->recipe->toArray(), ['cook_count' => $log->count]));
+        $top5 = $recipeCounts->sortDesc()->take(5)->map(function ($count, $recipeId) use ($logs) {
+            $recipe = $logs->firstWhere('recipe_id', $recipeId)->recipe;
+            return $recipe ? array_merge($recipe->toArray(), ['cook_count' => $count]) : null;
+        })->filter()->values();
 
         $streak = $this->computeStreak($userId);
 

@@ -16,27 +16,29 @@ class AdminAnalyticsController extends Controller
 {
     public function overview(): JsonResponse
     {
+        $activeUserIds = collect()
+            ->merge(CookLog::where('cooked_at', '>=', now()->startOfWeek())->pluck('user_id'))
+            ->merge(Favorite::where('created_at', '>=', now()->startOfWeek())->pluck('user_id'))
+            ->unique();
+
         return response()->json([
             'total_users'    => User::count(),
             'total_recipes'  => Recipe::count(),
             'total_favorites'=> Favorite::count(),
-            'total_cooks_today' => CookLog::whereDate('cooked_at', today())->count(),
-            'active_this_week'  => User::whereHas('cookLogs', function ($q) {
-                $q->where('cooked_at', '>=', now()->startOfWeek());
-            })->orWhereHas('favorites', function ($q) {
-                $q->where('created_at', '>=', now()->startOfWeek());
-            })->count(),
+            'total_cooks_today' => CookLog::where('cooked_at', '>=', today())->count(),
+            'active_this_week'  => $activeUserIds->count(),
         ]);
     }
 
     public function searchGaps(): JsonResponse
     {
         $gaps = SearchLog::where('results_count', 0)
-            ->select('query_value', DB::raw('count(*) as search_count'))
-            ->groupBy('query_value')
-            ->orderByDesc('search_count')
-            ->limit(20)
-            ->get();
+            ->get()
+            ->countBy('query_value')
+            ->sortDesc()
+            ->take(20)
+            ->map(fn($count, $query) => ['query_value' => $query, 'search_count' => $count])
+            ->values();
 
         return response()->json($gaps);
     }
@@ -45,15 +47,25 @@ class AdminAnalyticsController extends Controller
     {
         $sort = $request->input('sort', 'views');
 
-        $q = Recipe::withCount(['favorites', 'cookLogs']);
+        if ($sort === 'views') {
+            $recipes = Recipe::orderByDesc('view_count')->limit(20)->get();
+        } else {
+            $recipes = Recipe::all();
+        }
 
-        $q->orderByDesc(match ($sort) {
-            'favorites' => 'favorites_count',
-            'cooks'     => 'cook_logs_count',
-            default     => 'view_count',
-        });
+        foreach ($recipes as $recipe) {
+            $recipe->favorites_count = Favorite::where('recipe_id', $recipe->id)->count();
+            $recipe->cook_logs_count = CookLog::where('recipe_id', $recipe->id)->count();
+        }
 
-        return response()->json($q->limit(20)->get());
+        if ($sort !== 'views') {
+            $recipes = $recipes->sortByDesc(match ($sort) {
+                'favorites' => 'favorites_count',
+                'cooks'     => 'cook_logs_count',
+            })->take(20)->values();
+        }
+
+        return response()->json($recipes);
     }
 
     public function trendingSearches(Request $request): JsonResponse
@@ -61,28 +73,30 @@ class AdminAnalyticsController extends Controller
         $days = $request->integer('days', 7);
 
         $results = SearchLog::where('searched_at', '>=', now()->subDays($days))
-            ->select('query_value', DB::raw('count(*) as count'))
-            ->groupBy('query_value')
-            ->orderByDesc('count')
-            ->limit(30)
-            ->get();
+            ->get()
+            ->countBy('query_value')
+            ->sortDesc()
+            ->take(30)
+            ->map(fn($count, $query) => ['query_value' => $query, 'count' => $count])
+            ->values();
 
         return response()->json($results);
     }
 
     public function engagement(): JsonResponse
     {
-        $favsPerUser = User::withCount('favorites')
-            ->get()
-            ->groupBy(fn ($u) => match (true) {
-                $u->favorites_count === 0 => '0',
-                $u->favorites_count <= 5  => '1-5',
-                $u->favorites_count <= 20 => '6-20',
-                default                   => '20+',
-            })
-            ->map->count();
+        $favsPerUser = User::all()->map(function ($u) {
+            $u->favorites_count = Favorite::where('user_id', $u->id)->count();
+            return $u;
+        })->groupBy(fn ($u) => match (true) {
+            $u->favorites_count === 0 => '0',
+            $u->favorites_count <= 5  => '1-5',
+            $u->favorites_count <= 20 => '6-20',
+            default                   => '20+',
+        })->map->count();
 
-        $avgCooksPerUser = User::has('cookLogs')->withCount('cookLogs')->get()->avg('cook_logs_count');
+        $cookLogs = CookLog::all()->groupBy('user_id');
+        $avgCooksPerUser = $cookLogs->count() > 0 ? $cookLogs->map->count()->avg() : 0;
 
         return response()->json([
             'favorites_distribution' => $favsPerUser,

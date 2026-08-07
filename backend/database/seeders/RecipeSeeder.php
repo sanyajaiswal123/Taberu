@@ -1,10 +1,10 @@
 <?php
 
-namespace DatabaseSeeders;
+namespace Database\Seeders;
 
-use AppModelsIngredient;
-use AppModelsRecipe;
-use IlluminateDatabaseSeeder;
+use App\Models\Ingredient;
+use App\Models\Recipe;
+use Illuminate\Database\Seeder;
 
 class RecipeSeeder extends Seeder
 {
@@ -1479,9 +1479,11 @@ class RecipeSeeder extends Seeder
 
             foreach ($ingredientData as $item) {
                 $ingredient = Ingredient::firstOrCreate(['name' => $item['name']]);
-                $recipe->ingredients()->attach($ingredient->id, [
+                
+                $recipe->ingredients()->create([
+                    'name'     => $item['name'],
                     'quantity' => $item['quantity'],
-                    'unit' => $item['unit'],
+                    'unit'     => $item['unit'],
                 ]);
             }
         }

@@ -10,9 +10,9 @@ use App\Models\CookLog;
 use App\Models\MealPlan;
 use App\Models\RecipeNote;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Foundation\Auth\User as Authenticatable;
+use MongoDB\Laravel\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens;
+use App\Traits\HasApiTokens;
 
 class User extends Authenticatable
 {

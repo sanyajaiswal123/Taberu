@@ -31,12 +31,18 @@ class RecipeController extends Controller
 
         if ($request->filled('ingredients')) {
             $names = array_map('trim', explode(',', $request->input('ingredients')));
-            $query->whereHas('ingredients', fn ($q) => $q->whereIn('name', $names))
-                  ->withCount(['ingredients as match_count' => fn ($q) => $q->whereIn('name', $names)])
-                  ->orderByDesc('match_count');
+            $query->whereIn('ingredients.name', $names);
         }
 
-        $results = $query->with('ingredients')->get();
+        $results = $query->get();
+
+        if ($request->filled('ingredients')) {
+            $names = array_map('trim', explode(',', $request->input('ingredients')));
+            $results = $results->map(function ($recipe) use ($names) {
+                $recipe->match_count = collect($recipe->ingredients)->whereIn('name', $names)->count();
+                return $recipe;
+            })->sortByDesc('match_count')->values();
+        }
 
         // Log text searches
         if ($request->filled('q')) {
@@ -56,7 +62,7 @@ class RecipeController extends Controller
         $limit = min((int) $request->input('limit', 6), 50);
 
         $recipes = Cache::remember("recipes.popular.{$limit}", 300, fn () =>
-            Recipe::with('ingredients')->orderByDesc('view_count')->limit($limit)->get()
+            Recipe::orderByDesc('view_count')->limit($limit)->get()
         );
 
         return RecipeResource::collection($recipes);
@@ -64,8 +70,6 @@ class RecipeController extends Controller
 
     public function show(Recipe $recipe): RecipeResource
     {
-        $recipe->load('ingredients');
-
         return new RecipeResource($recipe);
     }
 
