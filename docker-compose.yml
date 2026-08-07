@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: taberu-backend
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - APP_URL=http://localhost:8000
+      - DB_CONNECTION=mongodb
+      - DB_HOST=mongodb
+      - DB_PORT=27017
+      - DB_DATABASE=taberu
+      - CACHE_STORE=file
+      - SESSION_DRIVER=file
+      - QUEUE_CONNECTION=sync
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:latest
+    container_name: taberu-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+volumes:
+  mongodb_data:
