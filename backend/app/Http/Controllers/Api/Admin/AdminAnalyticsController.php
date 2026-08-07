@@ -47,18 +47,12 @@ class AdminAnalyticsController extends Controller
     {
         $sort = $request->input('sort', 'views');
 
+        $query = Recipe::withCount(['favorites', 'cookLogs']);
+
         if ($sort === 'views') {
-            $recipes = Recipe::orderByDesc('view_count')->limit(20)->get();
+            $recipes = $query->orderByDesc('view_count')->limit(20)->get();
         } else {
-            $recipes = Recipe::all();
-        }
-
-        foreach ($recipes as $recipe) {
-            $recipe->favorites_count = Favorite::where('recipe_id', $recipe->id)->count();
-            $recipe->cook_logs_count = CookLog::where('recipe_id', $recipe->id)->count();
-        }
-
-        if ($sort !== 'views') {
+            $recipes = $query->get();
             $recipes = $recipes->sortByDesc(match ($sort) {
                 'favorites' => 'favorites_count',
                 'cooks'     => 'cook_logs_count',
@@ -85,16 +79,17 @@ class AdminAnalyticsController extends Controller
 
     public function engagement(): JsonResponse
     {
-        $favsPerUser = User::all()->map(function ($u) {
-            $u->favorites_count = Favorite::where('user_id', $u->id)->count();
-            return $u;
-        })->groupBy(fn ($u) => match (true) {
-            $u->favorites_count === 0 => '0',
-            $u->favorites_count <= 5  => '1-5',
-            $u->favorites_count <= 20 => '6-20',
+        $users = User::all();
+        $favorites = Favorite::all()->groupBy('user_id');
+        
+        $favsPerUser = $users->groupBy(fn ($u) => match (true) {
+            ($favorites->has($u->id) ? $favorites->get($u->id)->count() : 0) === 0 => '0',
+            ($favorites->has($u->id) ? $favorites->get($u->id)->count() : 0) <= 5  => '1-5',
+            ($favorites->has($u->id) ? $favorites->get($u->id)->count() : 0) <= 20 => '6-20',
             default                   => '20+',
         })->map->count();
 
+        // MongoDB doesn't support grouping in eloquent easily, so fetch all CookLogs, or use aggregate
         $cookLogs = CookLog::all()->groupBy('user_id');
         $avgCooksPerUser = $cookLogs->count() > 0 ? $cookLogs->map->count()->avg() : 0;
 

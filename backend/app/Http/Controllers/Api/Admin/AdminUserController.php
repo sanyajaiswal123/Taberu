@@ -11,8 +11,7 @@ class AdminUserController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $q = User::withCount(['favorites', 'cookLogs'])
-            ->selectRaw('users.*, (SELECT MAX(searched_at) FROM search_logs WHERE search_logs.user_id = users.id) as last_active');
+        $q = User::query();
 
         if ($search = $request->input('search')) {
             $q->where(function ($query) use ($search) {
@@ -22,6 +21,23 @@ class AdminUserController extends Controller
         }
 
         $users = $q->orderByDesc('created_at')->paginate(20);
+        
+        $userIds = collect($users->items())->pluck('id')->toArray();
+        $searchLogs = \App\Models\SearchLog::whereIn('user_id', $userIds)
+            ->orderByDesc('searched_at')
+            ->get()
+            ->unique('user_id')
+            ->keyBy('user_id');
+
+        $favorites = \App\Models\Favorite::whereIn('user_id', $userIds)->get()->groupBy('user_id');
+        $cookLogs = \App\Models\CookLog::whereIn('user_id', $userIds)->get()->groupBy('user_id');
+
+        $users->getCollection()->transform(function ($user) use ($searchLogs, $favorites, $cookLogs) {
+            $user->favorites_count = $favorites->has($user->id) ? $favorites->get($user->id)->count() : 0;
+            $user->cook_logs_count = $cookLogs->has($user->id) ? $cookLogs->get($user->id)->count() : 0;
+            $user->last_active = $searchLogs->has($user->id) ? $searchLogs->get($user->id)->searched_at : null;
+            return $user;
+        });
 
         return response()->json($users);
     }

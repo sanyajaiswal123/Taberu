@@ -22,6 +22,19 @@ class PersonalAccessToken extends Model implements HasAbilities
         return $this->morphTo("tokenable");
     }
 
+    public static function findToken($token)
+    {
+        if (strpos($token, "|") === false) {
+            return static::where("token", hash("sha256", $token))->first();
+        }
+
+        [$id, $token] = explode("|", $token, 2);
+
+        if ($instance = static::find($id)) {
+            return hash_equals($instance->token, hash("sha256", $token)) ? $instance : null;
+        }
+    }
+
     public function can($ability)
     {
         return in_array("*", $this->abilities) ||

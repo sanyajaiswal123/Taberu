@@ -13,14 +13,23 @@ class AdminRecipeController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $q = Recipe::withCount(['favorites', 'cookLogs'])
-            ->with('ingredients');
+        $q = Recipe::with('ingredients');
 
         if ($search = $request->input('search')) {
             $q->where('title', 'like', "%{$search}%");
         }
 
         $recipes = $q->orderByDesc('created_at')->paginate(20);
+        
+        $recipeIds = collect($recipes->items())->pluck('id')->toArray();
+        $favorites = \App\Models\Favorite::whereIn('recipe_id', $recipeIds)->get()->groupBy('recipe_id');
+        $cookLogs = \App\Models\CookLog::whereIn('recipe_id', $recipeIds)->get()->groupBy('recipe_id');
+
+        $recipes->getCollection()->transform(function ($recipe) use ($favorites, $cookLogs) {
+            $recipe->favorites_count = $favorites->has($recipe->id) ? $favorites->get($recipe->id)->count() : 0;
+            $recipe->cook_logs_count = $cookLogs->has($recipe->id) ? $cookLogs->get($recipe->id)->count() : 0;
+            return $recipe;
+        });
 
         return RecipeResource::collection($recipes)->response();
     }
@@ -45,7 +54,11 @@ class AdminRecipeController extends Controller
 
         if (!empty($data['ingredients'])) {
             foreach ($data['ingredients'] as $ing) {
-                $recipe->ingredients()->attach($ing['id'], [
+                // Determine ingredient name: frontend payload might pass 'name' directly or we lookup if it passes 'id'
+                $name = $ing['name'] ?? (isset($ing['id']) ? \App\Models\Ingredient::find($ing['id'])?->name : 'Unknown Ingredient');
+                
+                $recipe->ingredients()->create([
+                    'name'     => $name,
                     'quantity' => $ing['quantity'] ?? null,
                     'unit'     => $ing['unit'] ?? null,
                 ]);

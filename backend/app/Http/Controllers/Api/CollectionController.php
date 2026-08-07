@@ -14,10 +14,14 @@ class CollectionController extends Controller
     {
         $collections = $request->user()
             ->collections()
-            ->withCount('recipes')
             ->orderBy('sort_order')
             ->orderBy('created_at')
             ->get();
+
+        $collections->transform(function ($collection) {
+            $collection->recipes_count = is_array($collection->recipe_ids) ? count($collection->recipe_ids) : 0;
+            return $collection;
+        });
 
         return response()->json($collections);
     }
@@ -35,7 +39,8 @@ class CollectionController extends Controller
             'sort_order' => $request->user()->collections()->max('sort_order') + 1,
         ]);
 
-        return response()->json($collection->loadCount('recipes'), 201);
+        $collection->recipes_count = is_array($collection->recipe_ids) ? count($collection->recipe_ids) : 0;
+        return response()->json($collection, 201);
     }
 
     public function update(Request $request, Collection $collection): JsonResponse
@@ -50,7 +55,8 @@ class CollectionController extends Controller
 
         $collection->update($data);
 
-        return response()->json($collection->loadCount('recipes'));
+        $collection->recipes_count = is_array($collection->recipe_ids) ? count($collection->recipe_ids) : 0;
+        return response()->json($collection);
     }
 
     public function destroy(Request $request, Collection $collection): JsonResponse

@@ -15,6 +15,7 @@ class TokenFromCookie
     public function handle(Request $request, Closure $next): mixed
     {
         if (! $request->bearerToken() && $token = $request->cookie('taberu_token')) {
+            \Illuminate\Support\Facades\Log::info("TokenFromCookie extracted: " . $token);
             $request->headers->set('Authorization', 'Bearer ' . $token);
         }
 

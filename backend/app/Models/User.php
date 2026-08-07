@@ -13,11 +13,18 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use MongoDB\Laravel\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use App\Traits\HasApiTokens;
+use Laravel\Sanctum\HasApiTokens as SanctumHasApiTokens;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable;
+    use SanctumHasApiTokens, HasApiTokens, HasFactory, Notifiable {
+        HasApiTokens::createToken insteadof SanctumHasApiTokens;
+        HasApiTokens::tokens insteadof SanctumHasApiTokens;
+        HasApiTokens::tokenCan insteadof SanctumHasApiTokens;
+        HasApiTokens::currentAccessToken insteadof SanctumHasApiTokens;
+        HasApiTokens::withAccessToken insteadof SanctumHasApiTokens;
+    }
 
     /**
      * The attributes that are mass assignable.

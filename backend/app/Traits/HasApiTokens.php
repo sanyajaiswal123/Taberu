@@ -7,8 +7,6 @@ use Illuminate\Support\Str;
 
 trait HasApiTokens
 {
-    public $accessToken;
-
     public function tokens()
     {
         return $this->morphMany(\App\Models\PersonalAccessToken::class, 'tokenable');

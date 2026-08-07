@@ -1,60 +1,26 @@
 import api from './axiosInstance';
-import { mockRecipes } from '../data/mockData';
-
-const LOCAL_FAVORITES_KEY = 'taberu_local_favorites';
 
 // ── Recipes ──────────────────────────────────────────────────────────────────
 
 export const getAllRecipes = async (params = {}) => {
-  try {
-    const { data } = await api.get('/recipes', { params });
-    return data.data;
-  } catch (error) {
-    console.warn('Backend offline. Falling back to local mockRecipes.', error);
-    return mockRecipes;
-  }
+  const { data } = await api.get('/recipes', { params });
+  return data.data ?? data;
 };
 
 export const getPopularRecipes = async (limit = 6) => {
-  try {
-    const { data } = await api.get('/recipes/popular', { params: { limit } });
-    return data.data;
-  } catch (error) {
-    console.warn('Backend offline. Falling back to local popular recipes.', error);
-    return [...mockRecipes]
-      .sort((a, b) => (b.reviewCount || 0) - (a.reviewCount || 0))
-      .slice(0, limit);
-  }
+  const { data } = await api.get('/recipes/popular', { params: { limit } });
+  return data.data ?? data;
 };
 
 export const getRecipeById = async (id) => {
-  try {
-    const { data } = await api.get(`/recipes/${id}`);
-    return data.data;
-  } catch (error) {
-    console.warn(`Backend offline. Falling back to local recipe details for ID: ${id}`, error);
-    return mockRecipes.find(r => r.id === parseInt(id)) || null;
-  }
+  const { data } = await api.get(`/recipes/${id}`);
+  return data.data ?? data;
 };
 
 export const getIngredientSuggestions = async (query) => {
   if (!query || query.length < 2) return [];
-  try {
-    const { data } = await api.get('/ingredients/suggestions', { params: { q: query } });
-    return data;
-  } catch {
-    // Basic local autocomplete filter
-    const q = query.toLowerCase();
-    const ingredientsSet = new Set();
-    mockRecipes.forEach(r => {
-      r.ingredients.forEach(ing => {
-        if (ing.name ? ing.name.toLowerCase().includes(q) : ing.toLowerCase().includes(q)) {
-          ingredientsSet.add(ing.name || ing);
-        }
-      });
-    });
-    return Array.from(ingredientsSet).slice(0, 10).map(name => ({ name }));
-  }
+  const { data } = await api.get('/ingredients/suggestions', { params: { q: query } });
+  return data;
 };
 
 export const incrementView = async (id) => {
@@ -64,46 +30,16 @@ export const incrementView = async (id) => {
 // ── Favorites ────────────────────────────────────────────────────────────────
 
 export const getFavorites = async () => {
-  try {
-    const { data } = await api.get('/favorites');
-    return data.data;
-  } catch (error) {
-    console.warn('Backend offline. Falling back to local favorites.', error);
-    try {
-      const ids = JSON.parse(localStorage.getItem(LOCAL_FAVORITES_KEY) || '[]');
-      return mockRecipes.filter(r => ids.includes(r.id));
-    } catch {
-      return [];
-    }
-  }
+  const { data } = await api.get('/favorites');
+  return data.data ?? data;
 };
 
 export const addFavorite = async (id) => {
-  try {
-    await api.post(`/favorites/${id}`);
-  } catch (error) {
-    console.warn('Backend offline. Falling back to local add favorite.', error);
-    try {
-      const ids = JSON.parse(localStorage.getItem(LOCAL_FAVORITES_KEY) || '[]');
-      if (!ids.includes(id)) {
-        ids.push(id);
-        localStorage.setItem(LOCAL_FAVORITES_KEY, JSON.stringify(ids));
-      }
-    } catch {}
-  }
+  await api.post(`/favorites/${id}`);
 };
 
 export const removeFavorite = async (id) => {
-  try {
-    await api.delete(`/favorites/${id}`);
-  } catch (error) {
-    console.warn('Backend offline. Falling back to local remove favorite.', error);
-    try {
-      const ids = JSON.parse(localStorage.getItem(LOCAL_FAVORITES_KEY) || '[]');
-      const filtered = ids.filter(x => x !== id);
-      localStorage.setItem(LOCAL_FAVORITES_KEY, JSON.stringify(filtered));
-    } catch {}
-  }
+  await api.delete(`/favorites/${id}`);
 };
 
 // ── Collections ──────────────────────────────────────────────────────────────
@@ -137,7 +73,7 @@ export const removeRecipeFromCollection = async (collectionId, recipeId) => {
 
 export const getCollectionRecipes = async (collectionId) => {
   const { data } = await api.get(`/collections/${collectionId}/recipes`);
-  return data.data;
+  return data.data ?? data;
 };
 
 // ── Recipe Notes ─────────────────────────────────────────────────────────────
